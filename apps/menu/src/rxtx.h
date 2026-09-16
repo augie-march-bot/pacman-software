@@ -126,6 +126,7 @@ void toggle_rx_config(void);
 void toggle_rx_buffer_config(void);
 void toggle_rx_buffer_enables(void);
 void toggle_rx_test_patterns(void);
+void toggle_rx_test_pattern_delay(void);
 
 void zero_rxtx_counts(void);
 
