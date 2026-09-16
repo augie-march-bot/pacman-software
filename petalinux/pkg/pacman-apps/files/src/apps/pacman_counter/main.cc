@@ -11,8 +11,10 @@
 #define SOCKET_B_BINDING_SUB "tcp://localhost:5556"
 #define MAX_CHANNEL 40
 
-// BUFFER SIZE:  24 + N * 24
-#define MAX_BUFFER_SIZE 1048576
+// NOTE: this needs to be synchronized with MAX_PAYLOAD of pacman_dataserver,
+// HEADER_BYTES + MAX_PAYLOAD * WORD_BYTES
+// = 24 + 24*64000 = 1536024:
+#define MAX_BUFFER_SIZE 1536024
 uint32_t rx_buffer[MAX_BUFFER_SIZE/4];
 
 volatile bool running = true;
