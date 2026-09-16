@@ -249,7 +249,7 @@ void rxtx_menu(){
     printf("(1) read tx status (2) read rx status (3) read tx look (4) read rx look\r\n");
     printf("(5) toggle tx UART configs (6) toggle rx UART configs (7) zero counts\r\n");
     printf("(8) toggle rx buffer config (9) toggle rx enables (10) toggle tx mask \r\n");
-    printf("(11) toggle test patterns \r\n");
+    printf("(11) toggle test patterns (12) toggle delay\r\n");
     printf("...\r\n");
     printf("(20) init descriptor ring mode (21) show BDs (22) show head/tail (23) clear IOC flags \r\n");
     printf("(24) single TX (25) single RX (26) batch TX (27) batch RX \r\n");
@@ -300,6 +300,9 @@ void rxtx_menu(){
       break;
     case 11:
       toggle_rx_test_patterns();
+      break;
+    case 12:
+      toggle_rx_test_pattern_delay();
       break;
     case 20:
       init_rxtx_descriptor_ring_mode(512);

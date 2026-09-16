@@ -310,7 +310,7 @@ void toggle_rx_config(void){
 
 void toggle_rx_test_patterns(void){
   static int mode = 0;
-  mode = (mode + 1) % 2;
+  mode = (mode + 1) % 3;
   if (mode==0){
     unsigned config = 0x00000000;
     unsigned delay  = 0x00000000;
@@ -321,13 +321,30 @@ void toggle_rx_test_patterns(void){
     axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_B, 0);
   } else if (mode==1) {
     unsigned config = 0x00000101;
-    unsigned delay  = 0x00000200;
+    unsigned delay  = 0x00004000;
     printf("INFO:  Test patterns enabled  with config: 0x%08x delay 0x%08x\r\n", (unsigned int) config, (unsigned int) delay);
     axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_CONFIG, config);
     axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_DELAY, delay);
     axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_A, 0xAAAAAAAA);
     axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_B, 0xBBBBBBBB);
+  } else if (mode==2) {
+    unsigned config = 0x00000101;
+    unsigned delay  = 0x00004000;
+    printf("INFO:  Test patterns enabled  with config: 0x%08x delay 0x%08x\r\n", (unsigned int) config, (unsigned int) delay);
+    axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_CONFIG, config);
+    axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_DELAY, delay);
+    axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_A, 0x01234567);
+    axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_B, 0x89ABDCDF);
   }
+}
+
+void toggle_rx_test_pattern_delay(void){
+  static int mode = 0;
+  mode = (mode + 1) % 6;
+  unsigned delay[] = {0x4000, 0x1000, 0x400, 0xc6, 0x42, 0x00};
+
+  printf("INFO:  setting test pattern delay to: 0x%08x\r\n", (unsigned int) delay[mode]);
+  axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_PATTERN_DELAY, delay[mode]);
 }
 
 
