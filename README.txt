@@ -18,9 +18,9 @@ Branches:
 ---------
 
 zipline-2023.2:
-   This is the pristine zipline softwareware branch for Vivado 2023.2
+   This is the pristine zipline software branch for Vivado 2023.2
 
-working-on-3.<X>-zipline-2023:
+working-on-3.<X>-zipline-2023.2:
    A branch of this form is an integration branch aimed at zipline
    version 3.<X>
 
