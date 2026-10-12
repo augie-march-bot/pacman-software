@@ -45,10 +45,10 @@ void read_global_status(){
 
   printf("firmware major----------- %u   \r\n", (unsigned int) axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_FIRMWARE_MAJOR));
   printf("firmware minor----------- %u   \r\n", (unsigned int) axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_FIRMWARE_MINOR));
-  printf("firmware letter---------- 0x%x \r\n", (unsigned int) axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_FIRMWARE_LETTER));
+  printf("firmware patch----------- %u   \r\n", (unsigned int) axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_FIRMWARE_PATCH));
   printf("hardware major----------- %u   \r\n", (unsigned int) axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_HARDWARE_MAJOR));
   printf("hardware minor----------- %u   \r\n", (unsigned int) axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_HARDWARE_MINOR));
-  printf("hardware letter---------- 0x%x \r\n", (unsigned int)axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_HARDWARE_LETTER));
+  printf("hardware patch----------- %u   \r\n", (unsigned int) axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_HARDWARE_PATCH));
   printf("scratch a---------------- 0x%x \r\n", (unsigned int)axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_SCRATCH_A));
   printf("scratch b---------------- 0x%x \r\n", (unsigned int)axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_SCRATCH_B));
   printf("enables------------------ 0x%x \r\n", (unsigned int)axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_ENABLES));
