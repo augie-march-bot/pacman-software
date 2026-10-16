@@ -27,6 +27,9 @@ void check_iic();
 // set the PACMAN HW version to use for I2C
 void iic_set_hw_version(hw_val_t major, hw_val_t minor, hw_val_t patch);
 
+// use the simulated board (iic_sim.c) instead of hardware:
+void iic_set_simulated();
+
 // report IIC version currently in use:
 hw_val_t iic_get_hw_version();
 

@@ -14,6 +14,7 @@
 #include "led.h"
 #include "iic.h"
 #include "rxtx.h"
+#include "rxtx_menu.h"
 #include "atc.h"
 #include "adc.h"
 #include "asic.h"
@@ -64,105 +65,6 @@ void toggle_global_scratch_obsolete(){
   axil_write_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_SCRATCH_B, scrb);
 }
 
-// *** POWER UNIT ***
-
-void toggle_power(){
-  unsigned vddd[] = {0x00, 0x2000, 0x4000, 0x8000, 0xFFFF};
-  unsigned vdda[] = {0x00, 0x2000, 0x4000, 0x8000, 0xFFFF};
-  static int mode = 0;
-  mode = (mode + 1) % 5;
-
-  printf("INFO: setting VDDD to 0x%x \r\n", vddd[mode]);
-  for (int i=0; i<10; i++){
-    iic_set_vddd_dn(i, vddd[mode]);
-  }
-
-  printf("INFO: setting VDDA to 0x%x \r\n", vdda[mode]);
-  for (int i=0; i<10; i++){
-    iic_set_vdda_dn(i, vdda[mode]);
-  }
-}
-
-void toggle_test_dac(){
-  // VDDA DAC is used for postive  end of differential test DAC output
-  // VDDD DAC is used for negative end of differntial test DAC output
-
-  unsigned vp[] = {0x00, 0x1000, 0x0000, 0x2000, 0x0000};
-  unsigned vn[] = {0x00, 0x0000, 0x1000, 0x0000, 0x2000};
-  static int mode = 0;
-  mode = (mode + 1) % 5;
-
-  printf("INFO: setting DAC test VP to 0x%x \r\n", vp[mode]);
-  printf("INFO: setting DAC test VN to 0x%x \r\n", vn[mode]);
-  iic_set_vdda_dn(10, vp[mode]);
-  iic_set_vddd_dn(10, vn[mode]);
-
-}
-
-void monitor_power(){
-  for (int i=0; i<10; i++){
-    printf("TILE %2d POWER SUMMARY:\r\n", i+1);
-    unsigned vdda = iic_mon_vdda_mv(i);
-    unsigned vddd = iic_mon_vddd_mv(i);
-    unsigned idda = iic_mon_idda_ma(i);
-    unsigned iddd = iic_mon_iddd_ma(i);
-
-    printf("VDDA:  voltage:  %5d mV current: %5d mA\r\n", vdda, idda);
-    printf("VDDD:  voltage:  %5d mV current: %5d mA\r\n", vddd, iddd);
-  }
-
-  printf("BOARD POWER SUMMARY:\r\n");
-
-  unsigned vba = iic_mon_vboard_mv(0);
-  unsigned vbb = iic_mon_vboard_mv(1);
-  unsigned vbc = iic_mon_vboard_mv(2);
-  unsigned vbd = iic_mon_vboard_mv(3);
-
-  unsigned iba = iic_mon_iboard_ma(0);
-  unsigned ibb = iic_mon_iboard_ma(1);
-  unsigned ibc = iic_mon_iboard_ma(2);
-  unsigned prb = iic_mon_probe_dn();
-  printf("Board 3V6:  voltage:  %5d mV  current:  %5d mA\r\n",  vba, iba);
-  printf("Board 3V3:  voltage:  %5d mV  current:  %5d mA\r\n",  vbb, ibb);
-  printf("Board 3V0:  voltage:  %5d mV  current:  %5d mA\r\n",  vbc, ibc);
-  printf("RTD Probe:  3V3:      %5d mV  current:  0x%04X DN\r\n",   vbd, prb);
-}
-
-void record_iv_curves(){
-  FILE *file;
-  file = fopen("iv.txt", "w");
-  if (file == NULL) {
-    printf("ERROR: could not open file ");
-    return;
-  }
-
-  printf("INFO: first setting all voltages to zero.\r\n");
-  for (int i=0; i<10; i++){
-    iic_set_vdda_dn(i, 0);
-    iic_set_vddd_dn(i, 0);
-  }
-
-  for (int i=0; i<10; i++){
-    fprintf(file, "TILE:   %d\r\n", i+1);
-    printf("INFO:  VDDD/VDDA IV curves for Tile %d\r\n", i+1);
-    for (unsigned vset = 0x0000; vset<=0xFFFF; vset+=0x1000){
-      iic_set_vdda_dn(i, vset);
-      iic_set_vddd_dn(i, vset);
-      usleep(10);
-      unsigned vdda = iic_mon_vdda_mv(i);
-      unsigned vddd = iic_mon_vddd_mv(i);
-      unsigned idda = iic_mon_idda_ma(i);
-      unsigned iddd = iic_mon_iddd_ma(i);
-      printf("INFO:  vset: 0x%04x vdda: %7d idda: %7d vddd: %7d iddd: %7d\r\n", vset, vdda, idda, vddd, iddd);
-      fprintf(file, "vset: 0x%04x vdda: %7d idda: %7d vddd: %7d iddd: %7d\r\n", vset, vdda, idda, vddd, iddd);
-    }
-    iic_set_vdda_dn(i, 0);
-    iic_set_vddd_dn(i, 0);
-  }
-  fclose(file);
-}
-
-
 // *** MENUS ***
 
 void adc_menu(){
@@ -190,7 +92,7 @@ void adc_menu(){
       adc_toggle_config();
       break;
     case 4:
-      toggle_test_dac();
+      iic_toggle_test_dac();
       break;
     default:
       printf("invalid selection...\r\n");
@@ -223,13 +125,13 @@ void power_menu(){
       toggle_global_enables();
       break;
     case 2:
-      toggle_power();
+      iic_toggle_power();
       break;
     case 3:
-      monitor_power();
+      iic_monitor_power();
       break;
     case 4:
-      record_iv_curves();
+      iic_record_iv_curves();
       break;
     case 5:
       check_iic();
@@ -256,7 +158,7 @@ void rxtx_menu(){
     printf("(28) show TX buffer (29) show RX buffer (30) show RX transferred \r\n");
     printf("...\r\n");
     printf("(40) reset TX DMA (41) TX DMA status (42) reset RX DMA (43) RX DMA status (44) long DMA status \r\n");
-    printf("(45) benchmark TX (46) benchmark RX/TX loopback \r\n");
+    printf("(45) benchmark TX (46) benchmark RX/TX loopback (47) check RX/TX loopback (random data) \r\n");
 
     int input;
     if (scanf("%d", &input) != 1){
@@ -357,6 +259,9 @@ void rxtx_menu(){
       break;
     case 46:
       benchmark_rxtx_loopback();
+      break;
+    case 47:
+      menu_check_rxtx_loopback();
       break;
     default:
       printf("invalid selection...\r\n");
@@ -464,6 +369,7 @@ int main(){
   //printf("Random Max:  0x%x Random Number:  0x%x \r\n", RAND_MAX, rand());
 
   axil_platform_init();
+  print_global_version();
   iic_platform_init();
   bram_platform_init();
   init_rxtx();

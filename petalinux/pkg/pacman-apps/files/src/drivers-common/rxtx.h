@@ -2,6 +2,7 @@
 #define __RXTX_H_
 
 #include<stdbool.h>
+#include "hw_access.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,6 +18,47 @@ extern "C" {
 #define C_ADDR_RX_UART_STATUS       0x00
 #define C_ADDR_RX_UART_CONFIG       0x04
 #define C_ADDR_RX_UART_CHAN         0x08
+
+// RX UART config fields (C_ADDR_RX_UART_CONFIG; firmware rx_chan.vhd):
+#define RX_CONFIG_PERIOD_SHIFT 16          // [23:16] clocks per bit
+#define RX_CONFIG_PERIOD_MASK  0x00FF0000
+#define RX_CONFIG_FLAGS_SHIFT  14          // [15:14] bit 14: start a byte despite vote dissent
+#define RX_CONFIG_FLAGS_MASK   0x0000C000
+#define RX_CONFIG_MODE_SHIFT   12          // [13:12] sampling, see RX_MODE_*
+#define RX_CONFIG_MODE_MASK    0x00003000
+#define RX_CONFIG_INPUT_SHIFT  8           // [11:8]  input select, see RX_INPUT_*
+#define RX_CONFIG_INPUT_MASK   0x00000F00
+#define RX_CONFIG_PHASE_SHIFT  0           // [7:0]   sample point
+#define RX_CONFIG_PHASE_MASK   0x000000FF
+
+#define RX_CONFIG(period, flags, mode, input, phase) \
+  ( ((period) << RX_CONFIG_PERIOD_SHIFT) | ((flags) << RX_CONFIG_FLAGS_SHIFT) | ((mode) << RX_CONFIG_MODE_SHIFT) \
+  | ((input) << RX_CONFIG_INPUT_SHIFT) | ((phase) << RX_CONFIG_PHASE_SHIFT) )
+
+#define RX_MODE_OFF           0x0          // no sampling
+#define RX_MODE_EDGE          0x1          // sample phase relative to the detected falling edge
+#define RX_MODE_FIXED         0x2          // fixed sample phase (no edge detection)
+
+#define RX_INPUT_OFF          0x0
+#define RX_INPUT_PIN          0x1          // PISO from the pin
+#define RX_INPUT_LOOPBACK     0x2          // own TX (POSI), inside the firmware
+#define RX_INPUT_PATTERN      0x4          // test pattern generator
+#define RX_INPUT_EMUL         0x8          // ASIC emulation
+
+// RX buffer config fields (C_ADDR_RX_BUFFER_CONFIG = 0xMMMMTTTT; firmware rx_buffer.vhd), 0 = no condition:
+#define RX_BUFFER_MAX_WORDS_SHIFT 16          // [31:16] max 192-bit words per DMA packet
+#define RX_BUFFER_MAX_WORDS_MASK  0xFFFF0000
+#define RX_BUFFER_TIMEOUT_SHIFT   0           // [15:0]  packet timeout, in sweeps of 512 clocks
+#define RX_BUFFER_TIMEOUT_MASK    0x0000FFFF
+
+#define RX_BUFFER_CONFIG(max_words, timeout) \
+  ( ((max_words) << RX_BUFFER_MAX_WORDS_SHIFT) | ((timeout) << RX_BUFFER_TIMEOUT_SHIFT) )
+
+// DAQ setting (pacman-server):  0x260 words (0x3900 bytes) per packet, timeout 0xC4 sweeps (~1 ms)
+#define RX_BUFFER_CONFIG_DAQ  RX_BUFFER_CONFIG(0x260, 0xC4)
+
+// operating default:  UART input, 10 clocks per bit, sampled 4 clocks after the falling edge
+#define RX_CONFIG_DEFAULT     RX_CONFIG(0x0A, 0, RX_MODE_EDGE, RX_INPUT_PIN, 4)
 
 #define C_ADDR_RX_UART_STARTS       0x20
 #define C_ADDR_RX_UART_BEATS        0x24
@@ -108,6 +150,10 @@ void init_rxtx(void);
 void init_tx_descriptor_ring_mode(int ring_size);
 void init_rx_descriptor_ring_mode(int ring_size);
 
+void rx_set_input(unsigned chan, unsigned input);   // RX_INPUT_*
+void rx_set_config_all(hw_u32_t config);            // broadcast to all RX UARTs
+hw_val_t rx_get_buffer_config(void);
+void rx_set_buffer_config(hw_val_t config);
 void rx_disable_uart(unsigned chan);
 void rx_enable_uart(unsigned chan);
 bool rx_uart_is_enabled(unsigned chan);
@@ -115,6 +161,29 @@ bool rx_uart_is_enabled(unsigned chan);
 unsigned rx_pending(void);
 
 // menu hooks:
+// per-UART status, read in one call:
+typedef struct {
+  hw_val_t status;
+  hw_val_t config;
+  hw_val_t chan;
+  hw_val_t starts;
+  hw_val_t beats;
+  hw_val_t updates;
+  hw_val_t lost;
+  hw_val_t frame_err;
+  hw_val_t noise;
+} rx_uart_status_t;
+
+typedef struct {
+  hw_val_t status;
+  hw_val_t config;
+  hw_val_t starts;
+  hw_val_t beats;
+} tx_uart_status_t;
+
+void get_rx_uart_status(unsigned chan, rx_uart_status_t * us);
+void get_tx_uart_status(unsigned chan, tx_uart_status_t * us);
+
 void read_tx_status(void);
 void read_tx_look(void);
 void toggle_tx_config(void);
@@ -122,7 +191,6 @@ void toggle_tx_mask(void);
 
 void read_rx_status(void);
 void read_rx_look(void);
-void toggle_rx_config(void);
 void toggle_rx_buffer_config(void);
 void toggle_rx_buffer_enables(void);
 void toggle_rx_test_patterns(void);

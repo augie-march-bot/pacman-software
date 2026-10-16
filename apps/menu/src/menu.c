@@ -14,6 +14,7 @@
 #include "global.h"
 #include "iic.h"
 #include "rxtx.h"
+#include "rxtx_menu.h"
 #include "atc.h"
 #include "adc.h"
 #include "asic.h"
@@ -236,6 +237,7 @@ int main(){
 
   int status = 0;
   axil_platform_init();
+  print_global_version();
   iic_platform_init();
   gpio_platform_init();
 

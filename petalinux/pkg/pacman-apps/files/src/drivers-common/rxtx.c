@@ -250,62 +250,43 @@ void toggle_tx_config(void){
   }
 }
 
-void rx_disable_uart(unsigned chan){
+void rx_set_input(unsigned chan, unsigned input){
   if (chan < 40){
     hw_u32_t cfg = axil_read_register(SCOPE_RX+(chan<<8)+C_ADDR_RX_UART_CONFIG);
-    cfg &= (~0x00000F00);
+    cfg &= ~RX_CONFIG_INPUT_MASK;
+    cfg |= (input << RX_CONFIG_INPUT_SHIFT) & RX_CONFIG_INPUT_MASK;
     axil_write_register(SCOPE_RX+(chan<<8)+C_ADDR_RX_UART_CONFIG, cfg);
   }
 }
 
+void rx_set_config_all(hw_u32_t config){
+  axil_write_register(SCOPE_RX+UART_BROADCAST+C_ADDR_RX_UART_CONFIG, config);
+}
+
+hw_val_t rx_get_buffer_config(void){
+  return axil_read_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_BUFFER_CONFIG);
+}
+
+void rx_set_buffer_config(hw_val_t config){
+  axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_BUFFER_CONFIG, config);
+}
+
+void rx_disable_uart(unsigned chan){
+  rx_set_input(chan, RX_INPUT_OFF);
+}
+
 void rx_enable_uart(unsigned chan){
-  if (chan < 40){
-    hw_u32_t cfg = axil_read_register(SCOPE_RX+(chan<<8)+C_ADDR_RX_UART_CONFIG);
-    // for the particular config value of "00" the OR step could be skipped, but let's not:
-    cfg &= (~0x00000F00);
-    cfg |=   0x00000100;
-    axil_write_register(SCOPE_RX+(chan<<8)+C_ADDR_RX_UART_CONFIG, cfg);
-  }
+  rx_set_input(chan, RX_INPUT_PIN);
 }
 
 bool rx_uart_is_enabled(unsigned chan){
   if (chan < 40){
     hw_u32_t cfg = axil_read_register(SCOPE_RX+(chan<<8)+C_ADDR_RX_UART_CONFIG);
-    if ((cfg&0x00000F00) == 0x100) {
+    if ((cfg & RX_CONFIG_INPUT_MASK) == (RX_INPUT_PIN << RX_CONFIG_INPUT_SHIFT)) {
       return true;
     }
   }
   return false;
-}
-
-void toggle_rx_config(void){
-  static int mode = 0;
-  mode = (mode + 1) % 6;
-  if (mode==0){
-    unsigned config = 0x000A1104;
-    printf("INFO:  UART input.  Broadcasting rx config write 0x%08x \r\n", (unsigned int) config);
-    axil_write_register(SCOPE_RX+UART_BROADCAST+C_ADDR_RX_UART_CONFIG, config);
-  } else if (mode==1) {
-    unsigned config = 0x000A1204;
-    printf("INFO: Full internal loopback.  Broadcasting rx config write 0x%08x \r\n", (unsigned int) config);
-    axil_write_register(SCOPE_RX+UART_BROADCAST+C_ADDR_RX_UART_CONFIG, config);
-  } else if (mode==2) {
-    unsigned config = 0x000A1404;
-    printf("INFO: Test pattern mode.  Broadcasting rx config write 0x%08x \r\n", (unsigned int) config);
-    axil_write_register(SCOPE_RX+UART_BROADCAST+C_ADDR_RX_UART_CONFIG, config);
-  } else if (mode==3) {
-    unsigned config = 0x000A2201;
-    printf("INFO: Full internal loopback, with edge detect disabled.  Broadcasting rx config write 0x%08x \r\n", (unsigned int) config);
-    axil_write_register(SCOPE_RX+UART_BROADCAST+C_ADDR_RX_UART_CONFIG, config);
-  } else if (mode==4) {
-    unsigned config = 0x000A5208;
-    printf("INFO: Full internal loopback, with intentional noise.  Broadcasting rx config write 0x%08x \r\n", (unsigned int) config);
-    axil_write_register(SCOPE_RX+UART_BROADCAST+C_ADDR_RX_UART_CONFIG, config);
-  } else if (mode==5) {
-    unsigned config = 0x000A5209;
-    printf("INFO: Full internal loopback, with intentional failures.  Broadcasting rx config write 0x%08x \r\n", (unsigned int) config);
-    axil_write_register(SCOPE_RX+UART_BROADCAST+C_ADDR_RX_UART_CONFIG, config);
-  }
 }
 
 void toggle_rx_test_patterns(void){
@@ -354,7 +335,7 @@ void toggle_rx_buffer_config(void){
 
   unsigned config[] = {0x00000000, 0x00000001, 0x00000010, 0x00010000, 0x00100000};
   printf("INFO: Setting RX buffer config to 0x%08X \r\n", config[mode]);
-  axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_BUFFER_CONFIG, config[mode]);
+  rx_set_buffer_config(config[mode]);
 }
 
 void toggle_rx_buffer_enables(void){
@@ -366,20 +347,35 @@ void toggle_rx_buffer_enables(void){
   axil_write_register(SCOPE_RX+UART_GLOBAL+C_ADDR_RX_BUFFER_ENABLES, config[mode]);
 }
 
-void read_rx_status(void){
-  for (int i=0; i<40; i++){
-    unsigned cshift  = (i<<8);
-    unsigned status  = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_STATUS);
-    unsigned config  = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_CONFIG);
-    unsigned ichan   = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_CHAN);
-    unsigned starts  = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_STARTS);
-    unsigned beats   = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_BEATS);
-    unsigned updates = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_UPDATES);
-    unsigned lost    = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_LOST);
-    unsigned frame   = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_FRAME_ERR);
-    unsigned noise   = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_NOISE);
+void get_rx_uart_status(unsigned chan, rx_uart_status_t * us){
+  unsigned cshift = (chan<<8);
+  us->status    = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_STATUS);
+  us->config    = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_CONFIG);
+  us->chan      = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_CHAN);
+  us->starts    = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_STARTS);
+  us->beats     = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_BEATS);
+  us->updates   = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_UPDATES);
+  us->lost      = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_LOST);
+  us->frame_err = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_FRAME_ERR);
+  us->noise     = axil_read_register(SCOPE_RX+cshift+C_ADDR_RX_UART_NOISE);
+}
 
-    printf("%2d: ch: %2d cfg: 0x%08x status: 0x%08x s: %d b: %d u: %d l: %d f:%d n:%d\r\n",i, ichan, config, status, starts, beats, updates, lost, frame, noise);
+void get_tx_uart_status(unsigned chan, tx_uart_status_t * us){
+  unsigned cshift = (chan<<8);
+  us->status = axil_read_register(SCOPE_TX+cshift+C_ADDR_TX_UART_STATUS);
+  us->config = axil_read_register(SCOPE_TX+cshift+C_ADDR_TX_UART_CONFIG);
+  us->starts = axil_read_register(SCOPE_TX+cshift+C_ADDR_TX_UART_STARTS);
+  us->beats  = axil_read_register(SCOPE_TX+cshift+C_ADDR_TX_UART_BEATS);
+}
+
+void read_rx_status(void){
+  rx_uart_status_t us;
+  for (int i=0; i<40; i++){
+    get_rx_uart_status(i, &us);
+    printf("%2d: ch: %2d cfg: 0x%08x status: 0x%08x s: %d b: %d u: %d l: %d f:%d n:%d\r\n",i,
+           (unsigned int) us.chan, (unsigned int) us.config, (unsigned int) us.status,
+           (unsigned int) us.starts, (unsigned int) us.beats, (unsigned int) us.updates,
+           (unsigned int) us.lost, (unsigned int) us.frame_err, (unsigned int) us.noise);
   }
   printf("rx buffer status------------0x%x    \r\n", (unsigned int) axil_read_register(SCOPE_RX+0x3F00+C_ADDR_RX_BUFFER_STATUS));
   printf("rx buffer config------------0x%x    \r\n", (unsigned int) axil_read_register(SCOPE_RX+0x3F00+C_ADDR_RX_BUFFER_CONFIG));
@@ -419,14 +415,11 @@ void read_rx_look(void){
 }
 
 void read_tx_status(void){
+  tx_uart_status_t us;
   for (int i=0; i<40; i++){
-    unsigned cshift = (i<<8);
-    unsigned status = axil_read_register(SCOPE_TX+cshift+C_ADDR_TX_UART_STATUS);
-    unsigned config = axil_read_register(SCOPE_TX+cshift+C_ADDR_TX_UART_CONFIG);
-    unsigned starts = axil_read_register(SCOPE_TX+cshift+C_ADDR_TX_UART_STARTS);
-    unsigned beats = axil_read_register(SCOPE_TX+cshift+C_ADDR_TX_UART_BEATS);
+    get_tx_uart_status(i, &us);
     printf("%2d: config: 0x%08x status: 0x%08x starts: %d beats: %d\r\n",i,
-	   (unsigned int) config, (unsigned int) status, starts, beats);
+	   (unsigned int) us.config, (unsigned int) us.status, (unsigned int) us.starts, (unsigned int) us.beats);
   }
   printf("rx buffer status----------- 0x%x    \r\n", (unsigned int) axil_read_register(SCOPE_TX+0x3F00+C_ADDR_TX_BUFFER_STATUS));
 }

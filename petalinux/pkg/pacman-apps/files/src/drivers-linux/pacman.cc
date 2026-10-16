@@ -18,6 +18,7 @@
 #include "rxtx.h"
 #include "iic.h"
 #include "atc.h"
+#include "global.h"
 
 static unsigned count_rx = 0;
 static unsigned max_rx_pending = 0;
@@ -48,14 +49,14 @@ int pacman_init(int verbose){
   axil_platform_init();
   timing_platform_init();
 
-  unsigned fwmajor = axil_read_register(0XFF10);
-  unsigned fwminor = axil_read_register(0XFF14);
-  unsigned fwpatch = axil_read_register(0XFF18);
+  global_status_t gs;
+  get_global_status(&gs);
 
   if (verbose){
     printf("INFO:  Running pacman-server version %d.%d.%d\n",
 	   PACMAN_SERVER_MAJOR_VERSION, PACMAN_SERVER_MINOR_VERSION, PACMAN_SERVER_PATCH_VERSION);
-    printf("INFO:  Running pacman firmware version %d.%d.%d\n", fwmajor, fwminor, fwpatch);
+    printf("INFO:  Running pacman firmware version %u.%u.%u\n",
+	   (unsigned) gs.firmware_major, (unsigned) gs.firmware_minor, (unsigned) gs.firmware_patch);
   }
 
   // initialize I2C
@@ -70,13 +71,13 @@ int pacman_init(int verbose){
     printf("INFO:  Setting minimum DMA packet size to 0x3900 and packet timeout to 1 ms\n");
     printf("INFO:  Enabling Trigger, Sync, and Heartbeat words in the RX unit.\n");
   }
-  axil_write_register(0x7FB4, 0x026000C4);
+  rx_set_buffer_config(RX_BUFFER_CONFIG_DAQ);
   axil_write_register(0x7FB8, 0x0003);
 
   if (verbose){
     printf("INFO:  Configuring RX UARTs. \n");
   }
-  axil_write_register(0x7B04, 0x000A1104);
+  rx_set_config_all(RX_CONFIG_DEFAULT);
 
   if (verbose){
     printf("INFO:  Limiting TX bandwidth\n");

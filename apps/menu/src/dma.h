@@ -116,6 +116,8 @@ extern "C" {
 #define DMA_MAX_BD_RING_SIZE 1024
 
 // read and display the status and control registers for TX/RX
+hw_val_t dma_get_tx_status (void);  // MM2S_DMASR
+hw_val_t dma_get_rx_status (void);  // S2MM_DMASR
 void dma_show_tx_status (void);
 void dma_show_rx_status (void);
 

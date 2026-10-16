@@ -44,13 +44,6 @@ void axil_platform_init(){
     return;
   }
   close(dh);
-
-  unsigned fwmajor = G_AXIL[0XFF10>>2];
-  unsigned fwminor = G_AXIL[0XFF14>>2];
-  unsigned fwbuild = G_AXIL[0XFF18>>2];
-  unsigned hwcode  = G_AXIL[0XFF1C>>2];
-
-  printf("INFO:  Running pacman firmware version %d.%d (Build: 0x%x  HW Code:  0x%x)\n", fwmajor, fwminor, fwbuild, hwcode);
 }
 
 void axil_platform_close(){ }

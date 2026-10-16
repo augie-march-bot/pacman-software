@@ -16,16 +16,24 @@ void print_dma_control_long(hw_val_t value);
 // Read and interpret the status and control registers:
 //
 
+hw_val_t dma_get_tx_status(void){
+  return dma_read_register(MM2S_DMASR);
+}
+
+hw_val_t dma_get_rx_status(void){
+  return dma_read_register(S2MM_DMASR);
+}
+
 void dma_show_tx_status(void){
   hw_val_t cr = dma_read_register(MM2S_DMACR);
-  hw_val_t sr = dma_read_register(MM2S_DMASR);
+  hw_val_t sr = dma_get_tx_status();
   print_dma_control(cr);
   print_dma_status(sr);
 }
 
 void dma_show_rx_status(void){
   hw_val_t cr = dma_read_register(S2MM_DMACR);
-  hw_val_t sr = dma_read_register(S2MM_DMASR);
+  hw_val_t sr = dma_get_rx_status();
   print_dma_control(cr);
   print_dma_status(sr);
 }

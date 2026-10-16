@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "hw_access.h"
 #include "iic.h"
@@ -14,7 +15,7 @@ void iic_show_status(){
 
 void iic_toggle_hardware_version(){
   static int mode = 0;
-  mode = (mode + 1) % 4;
+  mode = (mode + 1) % 5;
 
   if (mode==0){
     printf("INFO: setting I2C HW version to latest (PACMAN 1V5)\r\n");
@@ -25,9 +26,12 @@ void iic_toggle_hardware_version(){
   } else if (mode==2){
     printf("INFO: setting I2C HW version to PACMAN 1V3 \r\n");
     iic_set_hw_version(1,3,0);
-  } else {
+  } else if (mode==3){
     printf("INFO: setting I2C HW version to disabled \r\n");
     iic_set_hw_version(0,0,0);
+  } else {
+    printf("INFO: setting I2C to the simulated board (no hardware) \r\n");
+    iic_set_simulated();
   }
 }
 
@@ -75,6 +79,56 @@ void iic_monitor_power(){
   printf("Board 3V3:  voltage:  %5d mV  current:  %5d mA\r\n",  vbb, ibb);
   printf("Board 3V0:  voltage:  %5d mV  current:  %5d mA\r\n",  vbc, ibc);
   printf("RTD Probe:  3V3:      %5d mV  current:  0x%04X DN\r\n",   vbd, prb);
+}
+
+void iic_toggle_test_dac(){
+  // VDDA DAC is used for postive  end of differential test DAC output
+  // VDDD DAC is used for negative end of differntial test DAC output
+
+  unsigned vp[] = {0x00, 0x1000, 0x0000, 0x2000, 0x0000};
+  unsigned vn[] = {0x00, 0x0000, 0x1000, 0x0000, 0x2000};
+  static int mode = 0;
+  mode = (mode + 1) % 5;
+
+  printf("INFO: setting DAC test VP to 0x%x \r\n", vp[mode]);
+  printf("INFO: setting DAC test VN to 0x%x \r\n", vn[mode]);
+  iic_set_vdda_dn(10, vp[mode]);
+  iic_set_vddd_dn(10, vn[mode]);
+
+}
+
+void iic_get_iv_curve(hw_u32_t itile, iic_iv_point_t iv[IIC_IV_POINTS]){
+  for (unsigned k=0; k<IIC_IV_POINTS; k++){
+    hw_val_t vset = k * 0x1000;
+    iic_set_vdda_dn(itile, vset);
+    iic_set_vddd_dn(itile, vset);
+    usleep(10);
+    iv[k].dac_dn  = vset;
+    iv[k].vdda_mv = iic_mon_vdda_mv(itile);
+    iv[k].idda_ma = iic_mon_idda_ma(itile);
+    iv[k].vddd_mv = iic_mon_vddd_mv(itile);
+    iv[k].iddd_ma = iic_mon_iddd_ma(itile);
+  }
+  iic_set_vdda_dn(itile, 0);
+  iic_set_vddd_dn(itile, 0);
+}
+
+void iic_record_iv_curves(){
+  iic_iv_point_t iv[IIC_IV_POINTS];
+
+  printf("INFO: first setting all voltages to zero.\r\n");
+  for (int i=0; i<10; i++){
+    iic_set_vdda_dn(i, 0);
+    iic_set_vddd_dn(i, 0);
+  }
+
+  for (int i=0; i<10; i++){
+    printf("INFO:  VDDD/VDDA IV curves for Tile %d\r\n", i+1);
+    iic_get_iv_curve(i, iv);
+    for (unsigned k=0; k<IIC_IV_POINTS; k++)
+      printf("INFO:  vset: 0x%04x vdda: %7d idda: %7d vddd: %7d iddd: %7d\r\n", (unsigned) iv[k].dac_dn,
+             (int) iv[k].vdda_mv, (int) iv[k].idda_ma, (int) iv[k].vddd_mv, (int) iv[k].iddd_ma);
+  }
 }
 
 void iic_menu(){
