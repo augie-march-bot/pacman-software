@@ -16,6 +16,8 @@ typedef enum {
 // forward declarations from iic_hw1v5.c
 void iic_hw1v5_set_vdda_dn(hw_u32_t itile, hw_u32_t val);
 void iic_hw1v5_set_vddd_dn(hw_u32_t itile, hw_u32_t val);
+void iic_hw1v5_set_vplus_dn(hw_val_t val);
+void iic_hw1v5_set_vminus_dn(hw_val_t val);
 
 hw_u32_t iic_hw1v5_mon_vdda_mv(hw_u32_t itile);
 hw_u32_t iic_hw1v5_mon_vddd_mv(hw_u32_t itile);
@@ -27,6 +29,7 @@ hw_val_t iic_hw1v5_mon_iboard_ma(hw_val_t chan);
 hw_u32_t iic_hw1v5_mon_probe_dn();
 
 void iic_hw1v5_set_mux_front_panel(hw_val_t itile);
+void iic_hw1v5_write_mux_reg(hw_val_t side, hw_val_t reg, hw_val_t value);
 void iic_hw1v5_set_mux_adc(hw_val_t itile);
 
 // forward declarations from iic_hw1v4.c
@@ -102,6 +105,14 @@ void iic_set_vddd_dn(hw_u32_t itile, hw_u32_t val){
   }
 }
 
+void iic_set_test_dac_dn(hw_u32_t vp, hw_u32_t vn){
+  switch (current_hw) {
+  case HW_1V5: iic_hw1v5_set_vplus_dn(vp); iic_hw1v5_set_vminus_dn(vn); break;
+  case HW_SIM: iic_sim_set_vdda_dn(10, vp); iic_sim_set_vddd_dn(10, vn); break;
+  default: break;
+  }
+}
+
 hw_u32_t iic_mon_vdda_mv(hw_u32_t itile){
   switch (current_hw) {
   case HW_1V5: return iic_hw1v5_mon_vdda_mv(itile);
@@ -167,6 +178,13 @@ void iic_set_mux_front_panel(hw_val_t itile){
   case HW_1V5: return iic_hw1v5_set_mux_front_panel(itile);
   case HW_SIM: return iic_sim_set_mux_front_panel(itile);
   case HW_1V4: return iic_hw1v4_set_mux_front_panel(itile);
+  default: return;
+  }
+}
+
+void iic_write_mux_reg(hw_val_t side, hw_val_t reg, hw_val_t value){
+  switch (current_hw) {
+  case HW_1V5: return iic_hw1v5_write_mux_reg(side, reg, value);
   default: return;
   }
 }

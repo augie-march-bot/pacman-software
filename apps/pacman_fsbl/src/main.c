@@ -116,6 +116,7 @@
 #include "xil_exception.h"
 #include "xstatus.h"
 #include "fsbl_hooks.h"
+#include "trenz.h"
 #ifndef SDT
 #include "xtime_l.h"
 #else
@@ -284,6 +285,12 @@ int main(void)
 	fsbl_printf(DEBUG_GENERAL,"Release %d.%d	%s-%s\r\n",
 			SDK_RELEASE_YEAR, SDK_RELEASE_QUARTER,
 			__DATE__,__TIME__);
+#ifdef PACMAN_JTAG_FSBL
+	/* Pac-Man Mod:  the JTAG FSBL (apps/jtag_boot) is this FSBL built with PACMAN_JTAG_FSBL */
+	xil_printf("\r\n--------------------------------------------------------------------------------\r\n");
+	xil_printf("JTAG mode First Stage Boot Loader for Pac-Man:\n\r");
+	xil_printf("Sets Pac-Man to JTAG mode (needed for writing QSPI Flash.)\n\r");
+#endif
 
 #if defined(XPAR_PS7_DDR_0_S_AXI_BASEADDR) || defined(XPAR_PS7_DDR_0_BASEADDRESS)
 
@@ -373,6 +380,10 @@ int main(void)
 	 */
 	BootModeRegister = Xil_In32(BOOT_MODE_REG);
 	BootModeRegister &= BOOT_MODES_MASK;
+#ifdef PACMAN_JTAG_FSBL
+	/* Pac-Man Mod (from the Trenz JTAG FSBL):  JTAG mode, whatever the boot mode pins say (PACMAN: SD) */
+	BootModeRegister = JTAG_MODE;
+#endif
 
 	/*
 	 * QSPI BOOT MODE
@@ -495,6 +506,14 @@ int main(void)
 		SlcrUnlock();
 #endif
 		}
+#ifdef PACMAN_JTAG_FSBL
+		/*
+		 * Pac-Man Mod:  the Trenz hook (MAC address, Ethernet PHY and CPLD LED setup).  JTAG mode exits
+		 * here, before FsblHookBeforeHandoff, so call it directly.
+		 */
+		if (TE_FsblHookBeforeHandoff_Custom() != XST_SUCCESS)
+			xil_printf("Trenz hook failed (MAC, PHY and LED setup)\r\n");
+#endif
 		/*
 		 * Stop the Watchdog before JTAG handoff
 		 */

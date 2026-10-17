@@ -92,8 +92,7 @@ void iic_toggle_test_dac(){
 
   printf("INFO: setting DAC test VP to 0x%x \r\n", vp[mode]);
   printf("INFO: setting DAC test VN to 0x%x \r\n", vn[mode]);
-  iic_set_vdda_dn(10, vp[mode]);
-  iic_set_vddd_dn(10, vn[mode]);
+  iic_set_test_dac_dn(vp[mode], vn[mode]);
 
 }
 

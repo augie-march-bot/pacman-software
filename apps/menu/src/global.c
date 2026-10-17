@@ -18,6 +18,7 @@ void get_global_status(global_status_t * gs){
   gs->synthesis_date = axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_SYNTHESIS_DATE);
   gs->git_hash_upper = axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_GIT_HASH_UPPER);
   gs->git_hash_lower = axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_GIT_HASH_LOWER);
+  gs->build_flags    = axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_BUILD_FLAGS);
   gs->vivado_major   = axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_VIVADO_MAJOR);
   gs->vivado_minor   = axil_read_register(SCOPE_GLOBAL+C_ADDR_GLOBAL_VIVADO_MINOR);
 }
@@ -55,6 +56,14 @@ void get_git_hash_string(char * buffer, size_t buffer_size){
 
 
 
+void get_build_string(hw_val_t build_flags, char * buffer, size_t buffer_size){
+  if (build_flags & ~GLOBAL_BUILD_FLAGS_MASK)
+    snprintf(buffer, buffer_size, "unknown (no build flags register)");
+  else
+    snprintf(buffer, buffer_size, "%s%s", (build_flags & GLOBAL_BUILD_OFFICIAL) ? "official" : "candidate",
+             (build_flags & GLOBAL_BUILD_DIRTY) ? ", dirty" : "");
+}
+
 void read_global_status(){
   global_status_t gs;
   char synthesis_date_str[32];
@@ -77,6 +86,9 @@ void read_global_status(){
   printf("status------------------- 0x%x \r\n", (unsigned int) gs.status);
   printf("synthesis date----------- %s   \r\n", synthesis_date_str);
   printf("git hash----------------- %s   \r\n", git_hash_str);
+  char build_str[48];
+  get_build_string(gs.build_flags, build_str, sizeof(build_str));
+  printf("build-------------------- %s   \r\n", build_str);
   printf("vivado version----------- %u.%u \r\n", (unsigned int) gs.vivado_major, (unsigned int) gs.vivado_minor);
 }
 
@@ -89,9 +101,12 @@ void print_global_version(){
   get_synthesis_date_string(synthesis_date_str, sizeof(synthesis_date_str));
   get_git_hash_string(git_hash_str, sizeof(git_hash_str));
 
-  printf("INFO:  PACMAN firmware %u.%u.%u, hardware %u.%u.%u, git %s, synthesized %s\r\n",
+  char build_str[48];
+  get_build_string(gs.build_flags, build_str, sizeof(build_str));
+
+  printf("INFO:  PACMAN firmware %u.%u.%u (%s), hardware %u.%u.%u, git %s, synthesized %s\r\n",
          (unsigned int) gs.firmware_major, (unsigned int) gs.firmware_minor, (unsigned int) gs.firmware_patch,
-         (unsigned int) gs.hardware_major, (unsigned int) gs.hardware_minor, (unsigned int) gs.hardware_patch,
+         build_str, (unsigned int) gs.hardware_major, (unsigned int) gs.hardware_minor, (unsigned int) gs.hardware_patch,
          git_hash_str, synthesis_date_str);
 }
 

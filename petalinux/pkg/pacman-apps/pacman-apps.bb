@@ -58,6 +58,8 @@ do_install() {
 	install -m 0755 ${S}/utils/pacman_gpio_init.sh ${D}${sysconfdir}/init.d/pacman_gpio_init
 	# expected by legacy users here as well:
 	install -m 0755 ${S}/utils/pacman_server.sh ${D}${bindir}/pacman_server
+	# embedded-Linux checkout of the Trenz module:
+	install -m 0755 ${S}/utils/pacman_lnxcheck.sh ${D}${bindir}/pacman_lnxcheck
 
 }
 

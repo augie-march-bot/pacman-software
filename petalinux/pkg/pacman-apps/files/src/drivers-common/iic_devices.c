@@ -13,7 +13,7 @@
 #define PAC1944_SINGLE_SHOT_CFG 0x85
 
 void ad5677_set_voltage(hw_u8_t addr, hw_u8_t chan, hw_val_t val) {
-  assert(chan <= AD5677_NUM_CHAN); // 16-channel DAC
+  assert(chan < AD5677_NUM_CHAN); // 16-channel DAC:  channels 0-15
 
   hw_u8_t reg = AD5677_BASE_REG + chan;
   hw_u8_t buf[2];
@@ -42,6 +42,10 @@ hw_val_t pac1944_adc_dn(hw_u8_t addr, hw_u8_t reg){
 
   uint32_t val = (buf[0] << 8) | buf[1];
   return val;
+}
+
+void max14661_write_reg(hw_u8_t addr, hw_u8_t reg, hw_u8_t value) {
+  iic_write(addr, reg, &value, 1);
 }
 
 void max14661_set_coma(hw_u8_t addr, hw_val_t code) {

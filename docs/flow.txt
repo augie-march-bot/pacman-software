@@ -75,6 +75,21 @@ tar -czf ../pacman-apps-latest.tar.gz ./
 cd ..
 rm -fr tmp
 
+# Booting over TFTP (firmware and Linux from a TFTP server)
+
+# on the TFTP server (any TFTP server; its address comes from DHCP, or set serverip in U-Boot):
+cd petalinux/ramdisk
+cp images/linux/boot.scr.uimg images/linux/system.bit images/linux/image.ub <tftp root>/
+
+# SD card: the production BOOT.BIN (and boot.scr) only, no image.ub.  U-Boot then finds nothing to boot on the
+# card and works down its boot targets to dhcp, which fetches boot.scr.uimg from the server and runs it.
+
+# without an SD card, over JTAG, use boot_tftp.tcl instead of boot.tcl.
+xsct apps/jtag_boot/install.tcl
+cd jtag_boot
+xsct run.tcl
+xsct boot_tftp.tcl
+
 # Booting without an SD card (e.g. for PACMAN 1V4 without SD card support)
 
 U-boot should find image.ub on the onboard MMC just fine as is.  You'll only need to customize the linux kernel (image.ub) by changing
@@ -133,34 +148,6 @@ root@Trenz:~# devmem 0x4000F020 w
 0xAAAABBBB
 root@Trenz:~# devmem 0x4000F024 w
 0xCCCCDDDD
-
-# Host notes
-#
-# Checked 2026-10-07 on Ubuntu 24.04 with Vivado/Vitis/PetaLinux 2023.2, from a
-# fresh clone, up to (not including) the board steps (UART, run.tcl, SD/QSPI).
-# The bare-metal installs (hello, menu, FSBL) took about a minute each; xsct did
-# not hang.  PetaLinux 2023.2 needs two changes on Ubuntu 24.04 (not a validated
-# host; the build warns about it):
-#
-# 1) Ubuntu 24.04 has glibc 2.39, newer than PetaLinux 2023.2's uninative 3.9,
-#    so Yocto turns uninative off and pseudo fails.  After create_full.sh, add
-#    to full/project-spec/meta-user/conf/petalinuxbsp.conf:
-#
-#      UNINATIVE_MAXGLIBCVERSION:forcevariable = "2.39"
-#      UNINATIVE_VERSION:forcevariable = "4.4"
-#      UNINATIVE_TARBALL = "${BUILD_ARCH}-nativesdk-libc-4.4.tar.xz"
-#      UNINATIVE_URL = "https://downloads.yoctoproject.org/releases/uninative/4.4/"
-#      UNINATIVE_CHECKSUM[x86_64] = "d81c54284be2bb886931fc87281d58177a2cd381cf99d1981f8923039a72a302"
-#
-# 2) If the repository sits in a directory with default ACLs (e.g. a shared
-#    group directory), do_unpack fails with "cp: preserving permissions ...:
-#    Invalid argument".  Remove the ACLs from the project and from petalinux/pkg
-#    (the pacman-apps recipe links there):
-#
-#      setfacl -R -b -k full ../pkg        (from petalinux/)
-#
-# build.sh returns 0 even when petalinux-build fails: check its output.
-# rpm2cpio (single package step) comes from the Ubuntu package rpm2cpio.
 
 #
 # Other Flows (Not Checked Recently...)

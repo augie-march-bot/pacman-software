@@ -23,8 +23,14 @@ extern "C" {
 #define C_ADDR_GLOBAL_SYNTHESIS_DATE  0xF30
 #define C_ADDR_GLOBAL_GIT_HASH_UPPER  0xF40
 #define C_ADDR_GLOBAL_GIT_HASH_LOWER  0xF44
+#define C_ADDR_GLOBAL_BUILD_FLAGS     0xF48
 #define C_ADDR_GLOBAL_VIVADO_MAJOR    0xF50
 #define C_ADDR_GLOBAL_VIVADO_MINOR    0xF54
+
+// build flags (C_ADDR_GLOBAL_BUILD_FLAGS), set at synthesis by version_info.tcl:
+#define GLOBAL_BUILD_DIRTY        0x00000001   // vivado/ had local changes
+#define GLOBAL_BUILD_OFFICIAL     0x00000002   // official release (BUILD_RELEASE committed); else a candidate release
+#define GLOBAL_BUILD_FLAGS_MASK   0x00000003   // other bits set:  firmware without this register
 
 // global enables (C_ADDR_GLOBAL_ENABLES):
 #define GLOBAL_ENABLE_TILES       0x000003FF   // bit i: local power and logic for tile i+1
@@ -46,6 +52,7 @@ typedef struct {
   hw_val_t synthesis_date;   // Unix time (UTC)
   hw_val_t git_hash_upper;
   hw_val_t git_hash_lower;
+  hw_val_t build_flags;
   hw_val_t vivado_major;
   hw_val_t vivado_minor;
 } global_status_t;
@@ -54,6 +61,7 @@ void get_global_status(global_status_t * gs);
 
 void get_synthesis_date_string(char * buffer, size_t buffer_size);
 void get_git_hash_string(char * buffer, size_t buffer_size);
+void get_build_string(hw_val_t build_flags, char * buffer, size_t buffer_size);   // "official", "candidate, dirty", ...
 
 void read_global_status();
 void print_global_version();

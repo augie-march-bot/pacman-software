@@ -37,6 +37,10 @@ hw_val_t iic_get_hw_version();
 void iic_set_vdda_dn(hw_u32_t itile, hw_u32_t val);
 void iic_set_vddd_dn(hw_u32_t itile, hw_u32_t val);
 
+// set the differential test DAC:  <vp> on the positive side, <vn> on the negative side
+// (PACMAN 1V5:  DAC channel 10 of the VDDA and VDDD DACs; also reachable as itile 10 above)
+void iic_set_test_dac_dn(hw_u32_t vp, hw_u32_t vn);
+
 // Get monitored value of VDDA and VDDD for TILE <chan>+1 in mV
 hw_u32_t iic_mon_vdda_mv(hw_u32_t itile);
 hw_u32_t iic_mon_vddd_mv(hw_u32_t itile);
@@ -58,6 +62,9 @@ hw_u32_t iic_mon_probe_dn();
 
 // Setup MUX to route chan to front panel: (0=off, 1-10=TILE, 11=DAC)
 void iic_set_mux_front_panel(hw_val_t chan);
+// raw register write to one front-panel MUX chip, side 0: P, side 1: N (PACMAN 1V5 MAX14661:
+// 0x10-0x13 shadow switch registers, 0x14 CMDA (COMA), 0x15 CMDB (COMB))
+void iic_write_mux_reg(hw_val_t side, hw_val_t reg, hw_val_t value);
 
 // Setup MUX to route chan to ADC: (0=off, 1-10=TILE, 11=DAC)
 void iic_set_mux_adc(hw_val_t chan);

@@ -22,6 +22,7 @@ hw_val_t pac1944_adc_dn(hw_u8_t addr, hw_u8_t reg);
 // addr: I2C address of device
 // code[3:0]: setting for COMA/COMB (see datasheet)
 void max14661_set_coma(hw_u8_t addr, hw_val_t code);
+void max14661_write_reg(hw_u8_t addr, hw_u8_t reg, hw_u8_t value);
 void max14661_set_comb(hw_u8_t addr, hw_val_t code);
 
 // Legacy devices (not present in latest HW version, but still supported in legacy HW)

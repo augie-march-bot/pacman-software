@@ -199,6 +199,7 @@ void toggle_rx_test_pattern_delay(void);
 void zero_rxtx_counts(void);
 
 void init_rxtx_descriptor_ring_mode(int ring_size);
+unsigned rxtx_ring_size(void);   // 0: no ring set up yet in this process
 void show_rxtx_bds(void);
 void show_rxtx_head_tail(void);
 

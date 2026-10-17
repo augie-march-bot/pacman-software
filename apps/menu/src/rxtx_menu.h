@@ -1,6 +1,7 @@
 #ifndef __RXTX_MENU_H_
 #define __RXTX_MENU_H_
 
+#include <stdint.h>
 #include "rxtx.h"
 
 #ifdef __cplusplus
@@ -18,21 +19,26 @@ extern "C" {
 void toggle_rx_config(void);
 
 // Loopback check with random data:  every TX packet carries a pseudo-random 64-bit
-// word for each of the 40 UARTs; each received word is compared with the word
-// expected next on its UART.  Uses the current RX config (pin or internal loopback).
+// word for each UART in uart_mask (bit u: UART u, 0-39); each received word is compared
+// with the word expected next on its UART.  A word from a UART outside the mask is a
+// stray word.  Uses the current RX config (pin or internal loopback) and the DMA ring
+// already set up (init_rxtx_descriptor_ring_mode); the ring is not touched.
+#define RXTX_ALL_UARTS 0xFFFFFFFFFFULL
 typedef struct {
   unsigned tx_packets;    // DMA packets sent
-  unsigned words_sent;    // UART words sent (40 per packet)
+  unsigned words_sent;    // UART words sent (one per masked UART per packet)
   unsigned words_rcvd;    // UART data words received and checked
   unsigned words_bad;     // received words with at least one bit error
   unsigned bit_errors;    // total bit errors in received words
   unsigned stale_words;   // words already waiting before the check started (discarded)
   unsigned other_words;   // received words not from a UART (sync, heartbeat, trigger)
+  unsigned stray_words;   // received words from a UART outside the mask
+  unsigned rcvd[40];      // words received per UART (stray words included)
   unsigned bad_packets;   // RX DMA packets with an invalid size
   unsigned tx_timeout;    // nonzero if TX stalled
 } rxtx_check_t;
 
-void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, rxtx_check_t * r);
+void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, uint64_t uart_mask, rxtx_check_t * r);
 void print_rxtx_check(const rxtx_check_t * r);
 void menu_check_rxtx_loopback(void);
 

@@ -60,13 +60,13 @@ static hw_val_t get_ma(hw_val_t dn){
 }
 
 void iic_hw1v5_set_vdda_dn(hw_val_t itile, hw_val_t val) {
-  if (itile >= MAX_TILE) return; // Only 10 tile channels
+  if (itile > MAX_TILE) return; // 10 tile channels, plus the test DAC (VOUT10, SET_VDDA_TEST)
 
   ad5677_set_voltage(ADDR_DAC_VDDA, itile, val);
 }
 
 void iic_hw1v5_set_vddd_dn(hw_val_t itile, hw_val_t val) {
-  if (itile >= MAX_TILE) return; // Only 10 tile channels
+  if (itile > MAX_TILE) return; // 10 tile channels, plus the test DAC (VOUT10, SET_VDDD_TEST)
 
   ad5677_set_voltage(ADDR_DAC_VDDD, itile, val);
 }
@@ -151,6 +151,11 @@ void iic_hw1v5_set_mux_front_panel(hw_val_t itile){
 
   max14661_set_coma(ADDR_MUX_N, code);
   max14661_set_coma(ADDR_MUX_P, code);
+}
+
+// raw register write to one front-panel MUX chip (side 0: P, U13; side 1: N, U8):
+void iic_hw1v5_write_mux_reg(hw_val_t side, hw_val_t reg, hw_val_t value){
+  max14661_write_reg(side ? ADDR_MUX_N : ADDR_MUX_P, reg, value);
 }
 
 void iic_hw1v5_set_mux_adc(hw_val_t itile){

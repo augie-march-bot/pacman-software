@@ -1,0 +1,18 @@
+# boot.cmd.tftp:  PACMAN TFTP boot script (built into boot.scr.uimg by the ramdisk build).
+#
+# Loads the firmware (system.bit) and Linux (image.ub, the ramdisk build) from a TFTP server.  U-Boot runs it:
+#  - from its last boot target (dhcp), when the SD card holds BOOT.BIN but no image.ub:  U-Boot fetches
+#    boot.scr.uimg from the TFTP server named by DHCP and runs it;
+#  - from scriptaddr, when loaded over JTAG (apps/jtag_boot/boot_tftp.tcl).
+# Without system.bit on the server, the firmware from BOOT.BIN stays.  Server address:  from DHCP, unless
+# serverip is set in the U-Boot environment.
+setenv autoload no
+dhcp
+echo "PACMAN TFTP boot from ${serverip}"
+if tftpboot 0x10000000 system.bit; then
+	fpga loadb 0 0x10000000 ${filesize}
+else
+	echo "PACMAN TFTP boot: no system.bit on the server, keeping the firmware from BOOT.BIN"
+fi
+tftpboot 0x10000000 image.ub && bootm 0x10000000
+echo "PACMAN TFTP boot failed"

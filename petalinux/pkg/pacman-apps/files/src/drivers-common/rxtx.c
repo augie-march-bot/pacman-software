@@ -56,6 +56,11 @@ void init_rx_descriptor_ring_mode(int ring_size){
   dma_write_rx_taildesc(RX_BD_BASEADDR);
 }
 
+// size of the TX/RX BD rings set up by init_rxtx_descriptor_ring_mode in this process (0: none yet)
+unsigned rxtx_ring_size(void){
+  return (tx_ring_size == rx_ring_size) ? tx_ring_size : 0;
+}
+
 void init_rxtx_descriptor_ring_mode(int ring_size){
   dma_reset_tx(DMA_TIMEOUT);
   dma_reset_rx(DMA_TIMEOUT);

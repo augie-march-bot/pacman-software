@@ -33,7 +33,7 @@ static uint64_t check_word(hw_u32_t seed, unsigned uart, unsigned k){
   return z ^ (z >> 31);
 }
 
-void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, rxtx_check_t * r){
+void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, uint64_t uart_mask, rxtx_check_t * r){
   const unsigned uarts      = 40;
   const unsigned batch_size = 100;
   const unsigned timeout    = 10000;
@@ -44,6 +44,10 @@ void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, rxtx_check_t * r){
   hw_val_t chan_id[40];         // channel id in the RX word header, per UART
 
   memset(r, 0, sizeof(*r));
+  if (rxtx_ring_size() == 0){
+    printf("ERROR:  loopback check:  no DMA ring set up (init_rxtx_descriptor_ring_mode).\r\n");
+    return;
+  }
   for (unsigned u=0; u<uarts; u++){
     rx_uart_status_t us;
     get_rx_uart_status(u, &us);
@@ -53,7 +57,6 @@ void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, rxtx_check_t * r){
 
   hw_val_t buffer_config = rx_get_buffer_config();
   rx_set_buffer_config(RX_BUFFER_CONFIG_DAQ);
-  init_rxtx_descriptor_ring_mode(128);
 
   // discard words left over from earlier activity (they would shift the expected sequence):
   for (unsigned idle = 0; idle < 100000; idle++){
@@ -68,7 +71,8 @@ void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, rxtx_check_t * r){
     }
   }
 
-  const unsigned words_expected = uarts * tx_packets;
+  const unsigned nmasked = __builtin_popcountll(uart_mask & RXTX_ALL_UARTS);
+  const unsigned words_expected = nmasked * tx_packets;
   while (tx_timeout && rx_timeout && (r->words_rcvd < words_expected)){
     if (r->tx_packets < tx_packets) {
       tx_timeout--;
@@ -76,8 +80,8 @@ void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, rxtx_check_t * r){
       hw_addr_t nxta = 0;
       while((batch_count < batch_size) && (batch_count < (tx_packets - r->tx_packets)) && (dma_next_available_tx_bd(&nxta))){
         hw_ptr_t tx_buf = dma_get_buffer(nxta);
-        tx_buf[0] = 0xFFFFFFFF;   // all 40 UARTs
-        tx_buf[1] = 0xFF;
+        tx_buf[0] = (hw_u32_t) uart_mask;           // UARTs 0-31
+        tx_buf[1] = (hw_u32_t) (uart_mask >> 32);   // UARTs 32-39
         for (unsigned u=0; u<uarts; u++){
           uint64_t w = check_word(seed, u, tx_k);
           tx_buf[TX_HEADER_U32_WORDS + 2*u]     = (hw_u32_t) w;
@@ -115,6 +119,11 @@ void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, rxtx_check_t * r){
               r->other_words++;
               continue;
             }
+            r->rcvd[u]++;
+            if (!((uart_mask >> u) & 1)){
+              r->stray_words++;
+              continue;
+            }
             uint64_t data = ((uint64_t) word[5] << 32) | word[4];   // fragments: header, timestamp, data
             uint64_t diff = data ^ check_word(seed, u, rx_k[u]++);
             r->words_rcvd++;
@@ -133,7 +142,7 @@ void check_rxtx_loopback(unsigned tx_packets, hw_u32_t seed, rxtx_check_t * r){
       }
     }
   }
-  r->words_sent = uarts * r->tx_packets;
+  r->words_sent = nmasked * r->tx_packets;
   r->tx_timeout = (tx_timeout == 0);
   rx_set_buffer_config(buffer_config);
 }
@@ -144,13 +153,17 @@ void print_rxtx_check(const rxtx_check_t * r){
   printf("INFO:  words received: %u (missing: %d) \r\n", r->words_rcvd, (int) (r->words_sent - r->words_rcvd));
   printf("INFO:  words in error: %u \r\n", r->words_bad);
   printf("INFO:  bit errors:     %u in %llu bits \r\n", r->bit_errors, 64ULL * r->words_rcvd);
-  printf("INFO:  stale words:    %u   other words: %u   bad packets: %u   tx timeout: %u \r\n",
-         r->stale_words, r->other_words, r->bad_packets, r->tx_timeout);
+  printf("INFO:  stale words:    %u   other words: %u   stray words: %u   bad packets: %u   tx timeout: %u \r\n",
+         r->stale_words, r->other_words, r->stray_words, r->bad_packets, r->tx_timeout);
 }
 
 void menu_check_rxtx_loopback(void){
   rxtx_check_t r;
+  if (rxtx_ring_size() == 0){
+    printf("INFO:  no DMA ring set up yet:  initialize the BD ring first (RX/TX menu item 20).\r\n");
+    return;
+  }
   printf("INFO:  loopback check, random data, 10000 packets, current RX config... \r\n");
-  check_rxtx_loopback(10000, 1, &r);
+  check_rxtx_loopback(10000, 1, RXTX_ALL_UARTS, &r);
   print_rxtx_check(&r);
 }

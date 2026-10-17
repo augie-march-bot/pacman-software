@@ -532,12 +532,8 @@ void dma_init_bd_ring (hw_addr_t bd_addr, unsigned nring, hw_val_t buf_size, hw_
   const hw_addr_t align_mask = DMA_BUFFER_ALIGN_BYTES-1;
 
   hw_addr_t aligned_size  = (align_mask + buf_size) & ~align_mask;
-  printf("INFO:  size of each buffer: 0x%08X, aligned size:  0x%08X\r\n", (unsigned int) buf_size, (unsigned int) aligned_size);
-
   hw_addr_t buf_addr       = bd_addr + nring*DMA_BD_BYTES;
-  printf("INFO:  first free address above BDs:     0x%08X\r\n", (unsigned int) buf_addr);
   buf_addr = (align_mask + buf_addr) & ~ align_mask; // this bit alignment using the 2^n - 1 trick
-  printf("INFO:  aligned start of buffer:          0x%08X\r\n", (unsigned int) buf_addr);
 
   for (int i = 0; i < nring; i++) {
     int inxt = (i+1) % nring;
@@ -547,12 +543,12 @@ void dma_init_bd_ring (hw_addr_t bd_addr, unsigned nring, hw_val_t buf_size, hw_
     hw_addr_t bfa = buf_addr + i * aligned_size;
 
     dma_safe_buffer(bfa, buf_size);
-
-
-    printf("INFO:  buffer descriptor %3d:  addr: 0x%08X nxt: 0x%08X buf: 0x%08X len:  0x%08X \r\n", i, (unsigned int) bda, (unsigned int) nxa, (unsigned int) bfa, (unsigned int) buf_size);
     dma_init_bd(bda, nxa, bfa, buf_size, bd_flags, bd_status);
   }
-  printf("INFO:  first free address above buffer:  0x%08X\r\n", (unsigned int) (buf_addr + nring*aligned_size));
+  // one summary line; the full listing:  dma_show_bd_ring (show_rxtx_bds)
+  printf("INFO:  BD ring at 0x%08X:  %u BDs, buffers 0x%X bytes (aligned 0x%X) at 0x%08X-0x%08X\r\n",
+         (unsigned int) bd_addr, nring, (unsigned int) buf_size, (unsigned int) aligned_size,
+         (unsigned int) buf_addr, (unsigned int) (buf_addr + nring*aligned_size));
 }
 
 void dma_show_bd_ring(hw_addr_t bd_addr) {
