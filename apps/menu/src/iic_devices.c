@@ -100,7 +100,7 @@ hw_val_t ina220_i_adc_dn(hw_u8_t addr){
 #define ADS1219_SHIFT_MUX      5
 
 hw_val_t ads1219_adc_dn(hw_u8_t addr, hw_u8_t mux){
-  hw_val_t timeout = 100;
+  int ready = 0;
   hw_u8_t buf[4];
 
   if (mux > 0x7)
@@ -112,14 +112,16 @@ hw_val_t ads1219_adc_dn(hw_u8_t addr, hw_u8_t mux){
   buf[0] = cfg;
   iic_write(addr, ADS1219_REG_CFG, buf, 1);
   iic_write(addr, ADS1219_REG_START, NULL, 0);
-  while(timeout--){
+  for (int i = 0; i < 100; i++){
     iic_read(addr, ADS1219_REG_READY, buf, 1, true);
-    if (buf[0] & ADS1219_MASK_READY)
+    if (buf[0] & ADS1219_MASK_READY) {
+      ready = 1;
       break;
+    }
     usleep(1000);
   }
-  if (!timeout) {
-    printf("ERROR: timeout waiting on ADS1219 ready bit");
+  if (!ready) {
+    printf("ERROR: timeout waiting on ADS1219 ready bit (addr 0x%x)\r\n", addr);
     return 0;
   }
 
