@@ -370,7 +370,7 @@ void asic_menu(){
   while(1){
     printf("choose an option:\r\n");
     printf("(x) Exit ASIC menu (d) default ATC config\r\n");
-    printf("(v) toggle ASIC version (u) toggle RX UART enables (p) toggle ASIC power (m) monitor power\r\n");
+    printf("(v) toggle ASIC version (u) toggle RX UART enables (p) toggle ASIC power (m) monitor tile 1 power\r\n");
     printf("(f) send full reset (i) send internal reset (c) config root chip \r\n");
     printf("(a) request all registers (h) hello ASIC (r) read RX \r\n");
     printf("(l) run ASIC loopback test (n) toggle chip id \r\n");
@@ -393,7 +393,7 @@ void asic_menu(){
       asic_toggle_power();
       break;
     case 'm':
-      iic_monitor_power();
+      iic_monitor_tile_power(0);  // the single-ASIC menu uses tile 1 only
       break;
     case 'f':
       asic_full_reset();

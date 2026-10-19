@@ -27,6 +27,7 @@ void iic_menu();
 void iic_show_status();
 void iic_toggle_hardware_version();
 void iic_toggle_power();
+void iic_monitor_tile_power(int itile);  // itile 0 = tile 1
 void iic_monitor_power();
 void iic_toggle_test_dac();
 void iic_record_iv_curves();

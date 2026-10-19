@@ -52,16 +52,20 @@ void iic_toggle_power(){
   }
 }
 
+void iic_monitor_tile_power(int i){
+  printf("TILE %2d POWER SUMMARY:\r\n", i+1);
+  unsigned vdda = iic_mon_vdda_mv(i);
+  unsigned vddd = iic_mon_vddd_mv(i);
+  unsigned idda = iic_mon_idda_ma(i);
+  unsigned iddd = iic_mon_iddd_ma(i);
+
+  printf("VDDA:  voltage:  %5d mV current: %5d mA\r\n", vdda, idda);
+  printf("VDDD:  voltage:  %5d mV current: %5d mA\r\n", vddd, iddd);
+}
+
 void iic_monitor_power(){
   for (int i=0; i<10; i++){
-    printf("TILE %2d POWER SUMMARY:\r\n", i+1);
-    unsigned vdda = iic_mon_vdda_mv(i);
-    unsigned vddd = iic_mon_vddd_mv(i);
-    unsigned idda = iic_mon_idda_ma(i);
-    unsigned iddd = iic_mon_iddd_ma(i);
-
-    printf("VDDA:  voltage:  %5d mV current: %5d mA\r\n", vdda, idda);
-    printf("VDDD:  voltage:  %5d mV current: %5d mA\r\n", vddd, iddd);
+    iic_monitor_tile_power(i);
   }
 
   printf("BOARD POWER SUMMARY:\r\n");
