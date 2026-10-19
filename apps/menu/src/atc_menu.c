@@ -17,8 +17,6 @@ void atc_menu(){
     switch(input){
     case 'x':
       return;
-    default:
-      printf("invalid selection...\r\n");
     case 'f':
       set_atc_default_config();
       break;
@@ -46,6 +44,8 @@ void atc_menu(){
     case 'd':
       send_poke_d(0x3FF);
       break;
+    default:
+      printf("invalid selection...\r\n");
     }
   }
 }
