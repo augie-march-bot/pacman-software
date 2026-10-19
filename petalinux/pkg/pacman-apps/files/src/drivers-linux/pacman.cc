@@ -59,12 +59,13 @@ int pacman_init(int verbose){
 	   (unsigned) gs.firmware_major, (unsigned) gs.firmware_minor, (unsigned) gs.firmware_patch);
   }
 
-  // initialize I2C
+  // initialize I2C, for the hardware version the firmware was built for:
   if (verbose){
-    printf("INFO:  Initializing PACMAN I2C interface for PACMAN 1v5\n");
+    printf("INFO:  Initializing PACMAN I2C interface for PACMAN %uv%u\n",
+	   (unsigned) gs.hardware_major, (unsigned) gs.hardware_minor);
   }
   iic_platform_init();
-  iic_set_hw_version(1,5,0);
+  iic_set_hw_version(gs.hardware_major, gs.hardware_minor, gs.hardware_patch);
 
   // DEFAULT parameters
   if (verbose){

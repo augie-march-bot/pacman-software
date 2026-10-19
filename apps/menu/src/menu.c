@@ -239,6 +239,10 @@ int main(){
   axil_platform_init();
   print_global_version();
   iic_platform_init();
+  // I2C for the hardware version the firmware was built for (the I2C menu can override):
+  global_status_t gs;
+  get_global_status(&gs);
+  iic_set_hw_version(gs.hardware_major, gs.hardware_minor, gs.hardware_patch);
   gpio_platform_init();
 
   mdio_init();
