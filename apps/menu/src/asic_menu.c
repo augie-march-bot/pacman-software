@@ -66,6 +66,22 @@ void asic_toggle_power(){
   }
 }
 
+// Tile 1 power.  On the 1v4, VDDD (ADS1219) is not read:  its reads fail with the ASIC
+// connected (2026-10-19, under investigation);  VDDA and IDDA (INA220) are read.
+void asic_monitor_power(){
+  global_status_t gs;
+  get_global_status(&gs);
+  if ((gs.hardware_major == 1) && (gs.hardware_minor == 4)) {
+    printf("TILE  1 POWER SUMMARY:\r\n");
+    unsigned vdda = iic_mon_vdda_mv(0);
+    unsigned idda = iic_mon_idda_ma(0);
+    printf("VDDA:  voltage:  %5d mV current: %5d mA\r\n", vdda, idda);
+    printf("VDDD:  not read on the 1v4\r\n");
+    return;
+  }
+  iic_monitor_tile_power(0);
+}
+
 void asic_toggle_rx_uart_enables(){
   static int mode = 0;
   mode = (mode + 1) % 5;
@@ -393,7 +409,7 @@ void asic_menu(){
       asic_toggle_power();
       break;
     case 'm':
-      iic_monitor_tile_power(0);  // the single-ASIC menu uses tile 1 only
+      asic_monitor_power();
       break;
     case 'f':
       asic_full_reset();
