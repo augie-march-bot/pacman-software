@@ -82,6 +82,23 @@ void asic_monitor_power(){
   iic_monitor_tile_power(0);
 }
 
+// Step the tile 1 DAC codes above nominal (+0, +5, +10, +15 % of the code), for bench checks of
+// the supplies (DMM at J1302).  The output voltage is not proportional to the code.
+void asic_step_power(){
+  static const unsigned pct[] = {0, 5, 10, 15};
+  static int step = 0;
+  step = (step + 1) % 4;
+
+  unsigned vdda_dn = 0xE2FF * (100 + pct[step]) / 100;
+  unsigned vddd_dn = 0x75FF * (100 + pct[step]) / 100;
+  if (vdda_dn > 0xFFFF) vdda_dn = 0xFFFF;
+  if (vddd_dn > 0xFFFF) vddd_dn = 0xFFFF;
+  printf("setting tile 1 DAC codes to nominal +%u %%:  VDDA 0x%04x VDDD 0x%04x\r\n", pct[step], vdda_dn, vddd_dn);
+  iic_set_vdda_dn(0, vdda_dn);
+  iic_set_vddd_dn(0, vddd_dn);
+  printf("VDDA:  voltage:  %5d mV\r\n", (int) iic_mon_vdda_mv(0));
+}
+
 void asic_toggle_rx_uart_enables(){
   static int mode = 0;
   mode = (mode + 1) % 5;
@@ -386,7 +403,7 @@ void asic_menu(){
   while(1){
     printf("choose an option:\r\n");
     printf("(x) Exit ASIC menu (d) default ATC config\r\n");
-    printf("(v) toggle ASIC version (u) toggle RX UART enables (p) toggle ASIC power (m) monitor tile 1 power\r\n");
+    printf("(v) toggle ASIC version (u) toggle RX UART enables (p) toggle ASIC power (m) monitor tile 1 power (b) step power +5%\r\n");
     printf("(f) send full reset (i) send internal reset (c) config root chip \r\n");
     printf("(a) request all registers (h) hello ASIC (r) read RX \r\n");
     printf("(l) run ASIC loopback test (n) toggle chip id \r\n");
@@ -407,6 +424,9 @@ void asic_menu(){
       break;
     case 'p':
       asic_toggle_power();
+      break;
+    case 'b':
+      asic_step_power();
       break;
     case 'm':
       asic_monitor_power();
