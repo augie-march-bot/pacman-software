@@ -232,6 +232,7 @@ void asic_read_rx(){
     if (verbose)
       printf("INFO: received packet with %d RX 192-bit words\r\n", words);
     hw_ptr_t buf = dma_get_buffer(nxta);
+    HW_INVALIDATE_DCACHE(buf, xbytes);
 
     // check DMA packet trailer:
     hw_u32_t * trailer = (hw_u32_t *) &buf[6*words];
@@ -315,6 +316,7 @@ void asic_loopback(){
 	}
 	unsigned words = (xbytes - RX_TRAILER_BYTES) / RX_WORD_BYTES;
 	hw_ptr_t buf = dma_get_buffer(nxta);
+	HW_INVALIDATE_DCACHE(buf, xbytes);
 
 	// check DMA packet trailer:
 	hw_u32_t * trailer = (hw_u32_t *) &buf[6*words];
