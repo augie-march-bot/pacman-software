@@ -109,6 +109,25 @@ void iic_platform_clear_status() {
   // Nothing to do
 }
 
+// Wait for the bus to go idle, at most IIC_BUS_TIMEOUT_US.  On a timeout, the controller is
+// reset (and its clock restored), so a stuck device cannot hang the caller.  Returns 0 if idle.
+#define IIC_BUS_TIMEOUT_US 10000
+
+static int iic_wait_bus(hw_u8_t addr, hw_u8_t reg) {
+  XTime start, now;
+  XTime_GetTime(&start);
+  while (XIicPs_BusIsBusy(&iicps)) {
+    XTime_GetTime(&now);
+    if ((now - start) > (XTime) COUNTS_PER_SECOND / 1000000 * IIC_BUS_TIMEOUT_US) {
+      printf("ERROR: I2C bus busy timeout at addr 0x%x reg 0x%x, resetting the controller\r\n", addr, reg);
+      XIicPs_Reset(&iicps);
+      XIicPs_SetSClk(&iicps, IIC_SCLK_RATE);
+      return -1;
+    }
+  }
+  return 0;
+}
+
 void iic_write(hw_u8_t addr, hw_u8_t reg, const hw_u8_t *data, hw_u32_t len) {
   hw_u32_t buf_len = 1 + len;
   hw_u8_t buf[buf_len];
@@ -123,28 +142,37 @@ void iic_write(hw_u8_t addr, hw_u8_t reg, const hw_u8_t *data, hw_u32_t len) {
     printf("I2C write failed to addr 0x%x reg 0x%x\r\n", addr, reg);
   }
 
-  while (XIicPs_BusIsBusy(&iicps)) { /* wait */ }
+  iic_wait_bus(addr, reg);
 }
 
 void iic_read(hw_u8_t addr, hw_u8_t reg, hw_u8_t *data, hw_u32_t len,  bool use_repeated_read) {
+  // On any failure the caller gets zeros:
+  for (hw_u32_t i = 0; i < len; i++)
+    data[i] = 0;
 
+  // Repeated start, as in the Xilinx example (xiicps_repeated_start_example.c):  the option
+  // holds the bus after the register is sent, so the bus never goes idle before the receive;
+  // clearing it before the receive releases the bus (stop) when the receive ends.
   if (use_repeated_read)
     XIicPs_SetOptions(&iicps, XIICPS_REP_START_OPTION);
-
 
   // Send register first
   hw_u8_t reg_buf = reg;
   int status = XIicPs_MasterSendPolled(&iicps, &reg_buf, 1, addr);
+
+  if (use_repeated_read)
+    XIicPs_ClearOptions(&iicps, XIICPS_REP_START_OPTION);
+
   if (status != XST_SUCCESS) {
     printf("I2C read: failed to send register 0x%x\r\n", reg);
-
-    if (use_repeated_read)
-      XIicPs_ClearOptions(&iicps, XIICPS_REP_START_OPTION);
-
+    iic_wait_bus(addr, reg);
     return;
   }
 
-  while (XIicPs_BusIsBusy(&iicps)) { /* wait */ }
+  if (!use_repeated_read) {
+    if (iic_wait_bus(addr, reg))
+      return;
+  }
 
   // Read data
   status = XIicPs_MasterRecvPolled(&iicps, data, len, addr);
@@ -152,11 +180,7 @@ void iic_read(hw_u8_t addr, hw_u8_t reg, hw_u8_t *data, hw_u32_t len,  bool use_
     printf("I2C read failed from addr 0x%x reg 0x%x\r\n", addr, reg);
   }
 
-  while (XIicPs_BusIsBusy(&iicps)) { /* wait */ }
-
-  if (use_repeated_read)
-    XIicPs_ClearOptions(&iicps, XIICPS_REP_START_OPTION);
-
+  iic_wait_bus(addr, reg);
 }
 
 
