@@ -102,7 +102,7 @@ void iic_hw1v4_set_mux_front_panel(hw_val_t itile){
   hw_u8_t coma_code = 0x10; // switch disabled
   hw_u8_t comb_code = 0x10; // switch disabled
 
-  if (itile <= MAX_TILE){
+  if (itile < MAX_TILE){
     coma_code = 2*itile + 1;
     comb_code = 2*itile + 0;
   }
